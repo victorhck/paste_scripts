@@ -1,0 +1,167 @@
+#!/bin/sh
+
+ ##############################################################################
+ #                                                                            #
+ # SUSE Paste script                                                          #
+ #                                                                            #
+ # Copyright (C) 2007-2010 by Michal Hrusecky <Michal@Hrusecky.net>           #
+ #                                                                            #
+ # This program is free software: you can redistribute it and/or modify       #
+ # it under the terms of the GNU General Public License as published by       #
+ # the Free Software Foundation, either version 3 of the License, or          #
+ # (at your option) any later version.                                        #
+ #                                                                            #
+ # This program is distributed in the hope that it will be useful,            #
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of             #
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              #
+ # GNU General Public License for more details.                               #
+ #                                                                            #
+ # You should have received a copy of the GNU General Public License          #
+ # along with this program.  If not, see <http://www.gnu.org/licenses/>.      #
+ #                                                                            #
+ ##############################################################################
+
+WINDOW=select
+API_KEY=""
+DELAY=0
+
+# Read configuration file
+
+[ -r ~/.susepaste ] && . ~/.susepaste
+
+# Process the command line parameters
+
+while [ "$1" ]; do
+	case "x$1" in
+	"x--all")
+		WINDOW="root"
+		shift 1
+		;;
+	"x-t")
+		TITLE="$2"
+		shift 2
+		;;
+	"x-k")
+		KEY="$2"
+		shift 2
+		;;
+	"x-n")
+		NICK="$2"
+		shift 2
+		;;
+	"x-e")
+		EXPIRE="$2"
+        case "$EXPIRE" in
+            "30m")
+                EXPIRE=30
+                ;;
+            "1h")
+                EXPIRE=60
+                ;;
+            "6h")
+                EXPIRE=360
+                ;;
+            "12h")
+                EXPIRE=720
+                ;;
+            "1d")
+                EXPIRE=1440
+                ;;
+            "1w")
+                EXPIRE=10080
+                ;;
+            "1m")
+                EXPIRE=40320
+                ;;
+            "3m")
+                EXPIRE=151200
+                ;;
+            "1y")
+                EXPIRE=604800
+                ;;
+            "2y")
+                EXPIRE=1209600
+                ;;
+        "3y")
+                EXPIRE=1814400
+                ;;
+            "0")
+                EXPIRE=0
+                ;;
+        esac
+		shift 2
+		;;
+	"x-d")
+		DELAY="$2"
+		shift 2
+		;;
+	"x-h")
+		echo "openSUSE Paste screenshot script"
+		echo ""
+		echo " usage:"
+        echo "   susepaste-screenshot [--all] [-n nick] [-t title] [-e expire] [-d delay secs] [-h show this help] [file]"
+		echo "(expire: 30m=30minutes; 1h=1hour; 6h=6hours; 12h=12hours; 1d=1day; 1w=1week; 1m=1month; 3m=3months; 1y=1year; 2y=2years; 3y=3years; 0=never)"
+		exit 0
+		;;
+	esac
+done
+
+# Key handling
+
+if [ "$KEY" ]; then
+	if [ "`expr substr "$KEY" 1 4`" = "KEY:" ]; then
+		KEY="`echo "$KEY" | sed 's|^KEY:||'`"
+	fi
+	API_KEY=" -F api_key=$KEY "
+fi
+
+# Defaults if nothing was specified
+
+# Nickname displayed as an author
+[ "$NICK"     ] || NICK="`whoami`"
+# Time to live for your paste in minutes (for possible values check the documentation)
+[ "$EXPIRE"   ] || EXPIRE=30
+
+# Delay x seconds
+sleep $DELAY
+
+# Real pasting and getting back the URL of the paste
+
+if [ "xselect" = "x$WINDOW" ]; then
+	WINDOW="`LANG=C wmctrl -v -a :SELECT: 2>&1 | sed -n 's|Using\ window:[[:blank:]]*0x\([0-9]*\)|0x\1|p'`"
+	[ "$TITLE"    ] || TITLE="`wmctrl -l | sed -n "s|$WINDOW[[:blank:]]\+[^[:blank:]]\+[[:blank:]]\+[^[:blank:]]\+[[:blank:]]\+\(.*\)|\1|p"`"
+else
+	[ "$TITLE"    ] || TITLE="`whoami`'s paste"
+fi
+
+TMP="`mktemp --tmpdir XXXXXXXX.jpg`"
+import -window $WINDOW -limit disk 500KiB -compress JPEG "$TMP" > /dev/null 2> /dev/null
+
+URL="`
+curl -v -F "file=@$TMP" -F "title=$TITLE"  -F "expire=$EXPIRE"     \
+        -F "name=$NICK" -F "submit=submit" -F "lang=image"         \
+        $API_KEY                                                   \
+        https://susepaste.org 2>&1 | sed -n 's|<\ [lL]ocation:\ ||p' `"
+
+rm -f "$TMP"
+
+# Check the results and inform the user
+
+if expr "$URL" : "^https://susepaste.org/[0-9a-f]\+" > /dev/null; then
+	ID="`echo "$URL" | sed 's|^https://susepaste.org/\([0-9a-f]\+\)[^0-9a-f]*|\1|'`"
+TEXT="Pasted as:
+   https://susepaste.org/$ID
+   https://paste.opensuse.org/$ID"
+	if [ -x /usr/bin/xclip ]; then
+		echo "https://susepaste.org/$ID" | xclip -selection clipboard
+		TEXT="$TEXT
+Link is also in your clipboard."
+	fi
+else
+	TEXT="Paste failed :-("
+fi
+if [ "`which zenity`" ]; then
+	zenity --info --title="openSUSE Paste" --text="$TEXT" --no-wrap
+else
+	echo "$TEXT" | xmessage -file -
+fi
