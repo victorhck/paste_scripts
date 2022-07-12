@@ -33,7 +33,7 @@ API_KEY=""
 
 # Process the command line parameters
 
-while [ "$1" ]; do
+while [ "$2" ]; do
 	case "x$1" in
 	"x-t" )
 		TITLE="$2"
