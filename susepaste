@@ -96,7 +96,7 @@ while [ "$2" ]; do
         "x-s" )
                 SCHEMA="$2"
                 shift 2 ;;
-	"x-h")
+	* )
 		echo "openSUSE Paste script"
 		echo ""
 		echo " usage:"
