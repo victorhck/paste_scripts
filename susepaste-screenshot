@@ -5,6 +5,7 @@
  # SUSE Paste script                                                          #
  #                                                                            #
  # Copyright (C) 2007-2010 by Michal Hrusecky <Michal@Hrusecky.net>           #
+ #               modified 2022 by Victorhck                                   #
  #                                                                            #
  # This program is free software: you can redistribute it and/or modify       #
  # it under the terms of the GNU General Public License as published by       #
@@ -24,6 +25,7 @@
 WINDOW=select
 API_KEY=""
 DELAY=0
+file_selected=0
 
 # Read configuration file
 
@@ -82,11 +84,15 @@ while [ "$1" ]; do
             "2y")
                 EXPIRE=1209600
                 ;;
-        "3y")
+            "3y")
                 EXPIRE=1814400
                 ;;
             "0")
                 EXPIRE=0
+                ;;
+            *)
+                echo "(expire: 30m=30minutes; 1h=1hour; 6h=6hours; 12h=12hours; 1d=1day; 1w=1week; 1m=1month; 3m=3months; 1y=1year; 2y=2years; 3y=3years; 0=never)"
+                exit 0
                 ;;
         esac
 		shift 2
@@ -95,11 +101,16 @@ while [ "$1" ]; do
 		DELAY="$2"
 		shift 2
 		;;
-	"x-h")
+    "x-f")
+        IMAGE="$2"
+        file_selected=1
+        shift 2
+        ;;
+	*)
 		echo "openSUSE Paste screenshot script"
 		echo ""
 		echo " usage:"
-        echo "   susepaste-screenshot [--all] [-n nick] [-t title] [-e expire] [-d delay secs] [-h show this help] [file]"
+        echo "   susepaste-screenshot [--all] [-n nick] [-t title] [-e expire] [-d delay secs] [-f <file> or <path/to/file>] [-h show this help]"
 		echo "(expire: 30m=30minutes; 1h=1hour; 6h=6hours; 12h=12hours; 1d=1day; 1w=1week; 1m=1month; 3m=3months; 1y=1year; 2y=2years; 3y=3years; 0=never)"
 		exit 0
 		;;
@@ -121,21 +132,22 @@ fi
 [ "$NICK"     ] || NICK="`whoami`"
 # Time to live for your paste in minutes (for possible values check the documentation)
 [ "$EXPIRE"   ] || EXPIRE=30
+[ "$TITLE"    ] || TITLE="`whoami`'s paste"
 
 # Delay x seconds
 sleep $DELAY
 
 # Real pasting and getting back the URL of the paste
 
-if [ "xselect" = "x$WINDOW" ]; then
-	WINDOW="`LANG=C wmctrl -v -a :SELECT: 2>&1 | sed -n 's|Using\ window:[[:blank:]]*0x\([0-9]*\)|0x\1|p'`"
-	[ "$TITLE"    ] || TITLE="`wmctrl -l | sed -n "s|$WINDOW[[:blank:]]\+[^[:blank:]]\+[[:blank:]]\+[^[:blank:]]\+[[:blank:]]\+\(.*\)|\1|p"`"
+if [ $file_selected -eq 1 ]; then
+    TMP=$IMAGE
 else
-	[ "$TITLE"    ] || TITLE="`whoami`'s paste"
+    [ "xselect" = "x$WINDOW" ]
+    WINDOW="`LANG=C wmctrl -v -a :SELECT: 2>&1 | sed -n 's|Using\ window:[[:blank:]]*0x\([0-9]*\)|0x\1|p'`"
+    [ "$TITLE"    ] || TITLE="`wmctrl -l | sed -n "s|$WINDOW[[:blank:]]\+[^[:blank:]]\+[[:blank:]]\+[^[:blank:]]\+[[:blank:]]\+\(.*\)|\1|p"`"
+    TMP="`mktemp --tmpdir XXXXXXXX.jpg`"
+    import -window $WINDOW -limit disk 500KiB -compress JPEG "$TMP" > /dev/null 2> /dev/null
 fi
-
-TMP="`mktemp --tmpdir XXXXXXXX.jpg`"
-import -window $WINDOW -limit disk 500KiB -compress JPEG "$TMP" > /dev/null 2> /dev/null
 
 URL="`
 curl -v -F "file=@$TMP" -F "title=$TITLE"  -F "expire=$EXPIRE"     \
@@ -143,7 +155,9 @@ curl -v -F "file=@$TMP" -F "title=$TITLE"  -F "expire=$EXPIRE"     \
         $API_KEY                                                   \
         https://susepaste.org 2>&1 | sed -n 's|<\ [lL]ocation:\ ||p' `"
 
-rm -f "$TMP"
+if [ $file_selected -eq 0 ]; then
+    rm -f "$TMP"
+fi
 
 # Check the results and inform the user
 
