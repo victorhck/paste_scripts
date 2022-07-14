@@ -26,6 +26,7 @@ WINDOW=select
 API_KEY=""
 DELAY=0
 file_selected=0
+no_file=0
 
 # Read configuration file
 
@@ -100,6 +101,9 @@ while [ "$1" ]; do
     "x-f")
         IMAGE="$2"
         file_selected=1
+        if [ \! -r "$IMAGE" ]; then
+            no_file=1
+        fi
         shift 2
         ;;
 	*)
@@ -169,6 +173,9 @@ Link is also in your clipboard."
 	fi
 else
 	TEXT="Paste failed :-("
+    if [ $no_file -eq 1 ]; then
+        TEXT="$TEXT\nThe files doesn't exits"
+    fi
 fi
 if [ "`which zenity`" ]; then
 	zenity --info --title="openSUSE Paste" --text="$TEXT" --no-wrap
