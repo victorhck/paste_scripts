@@ -27,6 +27,7 @@
 INPUT="<-"
 TYPE="code"
 API_KEY=""
+file_selected=0
 
 # Read configuration file
 
@@ -41,14 +42,6 @@ while [ "$2" ]; do
 		shift 2 ;;
 	"x-n" )
 		NICK="$2"
-		shift 2 ;;
-	"x-f" )
-		SYNTAX="$2"
-		if [ "$SYNTAX" = "image" ]; then
-			TYPE="file"
-		else
-			TYPE="code"
-		fi
 		shift 2 ;;
 	"x-e" )
 		EXPIRE="$2"
@@ -94,14 +87,16 @@ while [ "$2" ]; do
 	"x-k" )
 		KEY="$2"
 		shift 2 ;;
-        "x-s" )
-                SCHEMA="$2"
-                shift 2 ;;
+    "x-f")
+        FILE="$2"
+        file_selected=1
+        shift 2
+        ;;
 	* )
 		echo "openSUSE Paste script"
 		echo ""
 		echo " usage:"
-		echo "   susepaste [-f format] [-n nick] [-t title] [-e expire] [-s schema] [file]"
+		echo "   susepaste [-f format] [-n nick] [-t title] [-e expire] [-f <file> or <path/to/file>]"
 		echo "(expire: 30m=30minutes; 1h=1hour; 6h=6hours; 12h=12hours; 1d=1day; 1w=1week; 1m=1month; 3m=3months; 1y=1year; 2y=2years; 3y=3years; 0=never)"
 		echo ""
 		exit 0 ;;
@@ -119,26 +114,21 @@ fi
 
 # Do we want to use stdin or paste content of the file?
 
-if [ "$1" ]; then
-	if [ \! -r "$1" ]; then
-		echo "Can't read $1"
+if [ $file_selected -eq 1 ]; then
+	if [ \! -r "$FILE" ]; then
+		echo "Sorry, can't read the file: $FILE"
 		exit 2
 	fi
-	INPUT="<$1"
-	[ "$TITLE" ] || TITLE="`basename $1`"
+	INPUT="<$FILE"
+	[ "$TITLE" ] || TITLE="`basename $FILE`"
 	TMP=""
 	for i in /usr/share/susepaste/lang-mappings.sed \
 		~/.susepaste_lang_mappings.sed; do
-		[ -r "$i" ] && TMP="`LANG=C file -iLb "$1" | sed -nf "$i"`"
+		[ -r "$i" ] && TMP="`LANG=C file -iLb "$FILE" | sed -nf "$i"`"
+        echo "sintaxis == $TMP"
 	done
 	if [ "$TMP" ] && [ -z "$SYNTAX" ]; then
 		SYNTAX="$TMP"
-	fi
-	if [ "$SYNTAX" = "image" ]; then
-		INPUT="@$1"
-		TYPE="file"
-	else
-		TYPE="code"
 	fi
 fi
 
@@ -152,8 +142,6 @@ fi
 [ "$SYNTAX"   ] || SYNTAX="text"
 # Time to live for your paste in minutes (for possible values check the documentation)
 [ "$EXPIRE"   ] || EXPIRE=60
-# Should SSL be used as schema
-[ "$SCHEMA"   ] || SCHEMA=https
 
 # Real pasting and getting back the URL of the paste
 
@@ -161,17 +149,17 @@ URL="`
 curl -v -F "$TYPE=$INPUT" -F "title=$TITLE"  -F "expire=$EXPIRE"   \
         -F "name=$NICK"   -F "submit=submit" -F "lang=$SYNTAX"     \
 	$API_KEY                                                   \
-        ${SCHEMA}://susepaste.org 2>&1 | sed -n 's|<\ [lL]ocation:\ ||p' `"
+        https://susepaste.org 2>&1 | sed -n 's|<\ [lL]ocation:\ ||p' `"
 
 # Check the results and inform the user
 
-if expr "$URL" : "^${SCHEMA}://susepaste.org/[0-9a-f]\+" > /dev/null; then
-	ID="`echo "$URL" | sed 's|^'"${SCHEMA}"'://susepaste.org/\([0-9a-f]\+\)[^0-9a-f]*|\1|'`"
+if expr "$URL" : "^https://susepaste.org/[0-9a-f]\+" > /dev/null; then
+	ID="`echo "$URL"`" # | sed 's|^'https://susepaste.org/\([0-9a-f]\+\)[^0-9a-f]*|\1|'`"
 	echo "Pasted as:"
-	echo "   ${SCHEMA}://susepaste.org/$ID"
-	echo "   ${SCHEMA}://paste.opensuse.org/$ID"
+	echo "   $ID"
+	echo "   $ID"
 	if [ -x /usr/bin/xclip ]; then
-		echo "${SCHEMA}://susepaste.org/$ID" | xclip -selection clipboard
+		echo "$ID" | xclip -selection clipboard
 		echo "Link is also in your clipboard."
 	fi
 else
