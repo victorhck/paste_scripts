@@ -13,3 +13,11 @@ Los scripts sirven para subir un texto o una imagen de nuestro equipo al [servic
 ## Instalación
 
 Simplemente copiar los scripts en la ruta `/usr/bin/` renombrando primero los anteriores, si queremos volver a atrás.
+
+## Migración de GitHub
+
+Los scripts los he migrado de GitHub a Codeberg.org. Un servicio de hospedaje de repositorios git comunitario, respetuoso con la privacidad y que opera su sitio con software libre.
+
+Puedes encontrar el código en este enlace:
+
+* https://codeberg.org/victorhck/paste_scripts
