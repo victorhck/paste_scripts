@@ -124,8 +124,7 @@ if [ $file_selected -eq 1 ]; then
 	TMP=""
 	for i in /usr/share/susepaste/lang-mappings.sed \
 		~/.susepaste_lang_mappings.sed; do
-		[ -r "$i" ] && TMP="`LANG=C file -iLb "$FILE" | sed -nf "$i"`"
-        echo "sintaxis == $TMP"
+		[ -r "$i" ] && TMP=$(file -iLb "$FILE" | sed -nf "$i")
 	done
 	if [ "$TMP" ] && [ -z "$SYNTAX" ]; then
 		SYNTAX="$TMP"
