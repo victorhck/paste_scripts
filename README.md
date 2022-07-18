@@ -7,7 +7,6 @@ Los scripts sirven para subir un texto o una imagen de nuestro equipo al [servic
 * Añadir en la opción de expiración un diálogo más amigable basado en minutos, horas, días, meses, años:
 
 `30m = 30 minutos; 1h = 1 hora; 6h = 6 horas; 12h = 12 horas; 1d = 1días; 1w = 1 semana; 1m = 1 mes; 3m = 3 meses; 1y = 1 año; 2y = 2 años; 3y = 3 años; 0 = nunca`
-* Añadir la opción -h para mostrar la ayuda del script
 * Añadir la opción -d [seg] para añadir un _delay_ a la hora de tomar una captura de pantalla con _susepaste-screenshot_.
 * Solucionar error al copiar el texto al portapapeles del sistema
 

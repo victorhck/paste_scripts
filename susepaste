@@ -35,7 +35,7 @@ file_selected=0
 
 # Process the command line parameters
 
-while [ "$2" ]; do
+while [ "$1" ]; do
 	case "x$1" in
 	"x-t" )
 		TITLE="$2"
@@ -76,7 +76,7 @@ while [ "$2" ]; do
             "2y")
                 EXPIRE=1209600
                 ;;
-        "3y")
+            "3y")
                 EXPIRE=1814400
                 ;;
             "0")
@@ -96,7 +96,7 @@ while [ "$2" ]; do
 		echo "openSUSE Paste script"
 		echo ""
 		echo " usage:"
-		echo "   susepaste [-f format] [-n nick] [-t title] [-e expire] [-f <file> or <path/to/file>]"
+		echo "   susepaste [-n nick] [-t title] [-e expire] [-f <file> or <path/to/file>]"
 		echo "(expire: 30m=30minutes; 1h=1hour; 6h=6hours; 12h=12hours; 1d=1day; 1w=1week; 1m=1month; 3m=3months; 1y=1year; 2y=2years; 3y=3years; 0=never)"
 		echo ""
 		exit 0 ;;
